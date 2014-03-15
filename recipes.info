@@ -1,0 +1,5 @@
+name = Recipes
+description = TODO: Description of module
+package = Custom
+core = 7.x
+files[] = tests/recipes.test

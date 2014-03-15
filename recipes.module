@@ -1,0 +1,154 @@
+<?php
+
+/**
+ * @file recipes.module
+ * TODO: Enter file description here.
+ */
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function recipes_field_formatter_info()
+{
+    return array(
+        'recipes_integer_duration' => array(
+            'label'       => t('Duration'),
+            'field types' => array( 'number_integer' ),
+        )
+    );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function recipes_field_formatter_view($entity_type, $entity, $field, $instance,
+                                      $langcode, $items, $display)
+{
+    $element  = array();
+    $settings = $display[ 'settings' ];
+
+    switch ($display[ 'type' ])
+    {
+        case 'recipes_integer_duration':
+            foreach ($items as $delta => $item)
+            {
+                list( $hours, $minutes ) = getTime($item[ 'value' ]);
+
+                $hourPlural = $hours > 1 ? "hours" : "hour";
+
+                if ($minutes > 0)
+                {
+                    list( $numerator, $denominator ) =
+                        minutesToFraction($minutes);
+
+                    $remainder = fractionMarkup($numerator, $denominator);
+
+                    $minutePlural = $minutes > 1 ? "minutes" : "minute";
+
+                    $hourMarkup   = "{$hours} and {$remainder} {$hourPlural}";
+                    $minuteMarkup = "{$minutes} {$minutePlural}";
+                }
+                else
+                {
+                    $hourMarkup   = "{$hours} {$hourPlural}";
+                    $minuteMarkup = "";
+                }
+
+                $markup = $hours > 0
+                    ? "{$hourMarkup}"
+                    : "{$minuteMarkup}";
+
+                $element[ $delta ] = array( '#markup' => $markup );
+            }
+            break;
+    }
+
+    return $element;
+}
+
+/**
+ * Fairly standard formulation to convert a number of minutes
+ * to a number of hours with minutes of overflow.
+ *
+ * @param int $minutes Some number of minutes
+ *
+ * @return array A pair (hours, minutes)
+ */
+function getTime($minutes)
+{
+    $hours   = floor($minutes / 60);
+    $minutes = $minutes % 60;
+
+    return array( $hours, $minutes );
+}
+
+/**
+ * Return the parts of a fraction representing parts of an hour.
+ *
+ * @param int $minutes Some number of minutes
+ *
+ * @return array A pair (numerator, denominator)
+ */
+function minutesToFraction($minutes)
+{
+    $numerator   = $minutes / gcd($minutes, 60);
+    $denominator = 60 / $minutes;
+
+    return array( $numerator, $denominator );
+}
+
+/**
+ * Return an HTML fraction
+ *
+ * A sort of ugly hack, but it's the right effect for arbitrary
+ * fractions. Note to self: consider adding logic to use appropriate
+ * fractional glyphs.
+ *
+ * @param int $numerator
+ * @param int $denominator
+ *
+ * @return string
+ */
+function fractionMarkup($numerator, $denominator)
+{
+    $markup = <<<HTML
+<sup>{$numerator}</sup>/<sub>{$denominator}</sub>
+HTML;
+
+    return $markup;
+
+}
+
+/**
+ * Return the greatest common divisor of two integers.
+ *
+ * One of those functions that makes me wish PHP supported type
+ * hinting for primitive types. Since '0' is false-y in PHP,
+ * I could have gotten away with !$a and !$b, but being explicit
+ * is clearer. The abs()'s are scattered about to get the correct
+ * definition of gcd. In particular,
+ *
+ * gcd(a, 0)  = abs(a)
+ * gcd(0, b)  = abs(b)
+ * gcd(2, 4)  = 2
+ * gcd(2, -4) = 2
+ *
+ * @param int $a
+ * @param int $b
+ *
+ * @return number
+ */
+function gcd($a, $b)
+{
+    if ($a == 0)
+    {
+        return abs($b);
+    }
+
+    if ($b == 0)
+    {
+        return abs($a);
+    }
+
+    return ( $a % $b ) ? gcd($a, abs($a - $b)) : abs($b);
+}
